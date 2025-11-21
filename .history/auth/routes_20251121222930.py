@@ -1,10 +1,10 @@
+# auth/routes.py
 import bcrypt
 import jwt
 import datetime
 from flask import Blueprint, request, jsonify, make_response, current_app, g
 from models.user import User
 from models import db
-from functools import wraps
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -24,7 +24,6 @@ def decode_jwt(token):
         return None
 
 def auth_required(func):
-    @wraps(func)
     def wrapper(*args, **kwargs):
         token = request.cookies.get('jwt')
         payload = decode_jwt(token) if token else None
@@ -32,6 +31,7 @@ def auth_required(func):
             return jsonify({'message': 'Token invalid or missing'}), 401
         g.user_id = payload['user_id']
         return func(*args, **kwargs)
+    wrapper.__name__ = func.__name__
     return wrapper
 
 @auth_bp.route('/signup', methods=['POST'])
@@ -39,30 +39,28 @@ def signup():
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
-    
+
     if not username or not password:
         return jsonify({'message': 'Username and password required'}), 400
-        
+
     if User.query.filter_by(username=username).first():
         return jsonify({'message': 'User already exists'}), 400
-        
+
     hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
     user = User(username=username, password=hashed)
     db.session.add(user)
     db.session.commit()
-    
-    return jsonify({'message': 'User registered successfully'}), 201
+    return jsonify({'message': 'User registered'}), 201
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
-    
     user = User.query.filter_by(username=username).first()
     if not user or not bcrypt.checkpw(password.encode('utf-8'), user.password):
         return jsonify({'message': 'Invalid username or password'}), 401
-        
+
     token = encode_jwt(user.id)
     resp = make_response({'message': 'Login successful'})
     resp.set_cookie('jwt', token, httponly=True, samesite='Strict')

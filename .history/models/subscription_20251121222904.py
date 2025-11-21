@@ -7,6 +7,5 @@ class UserSubscription(db.Model):
     start_date = db.Column(db.DateTime, nullable=False)
     end_date = db.Column(db.DateTime, nullable=False)
     active = db.Column(db.Boolean, default=True)
-    
     user = db.relationship('User', back_populates='subscriptions')
     plan = db.relationship('SubscriptionPlan')
