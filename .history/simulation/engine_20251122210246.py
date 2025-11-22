@@ -73,20 +73,17 @@ class SimulationEngine:
         data_rows = []
         
         for user_id in range(1, num_users + 1):
-           # 1. Identify User Type (Random Variable)
+            # 1. Identify User Type (Random Variable)
             rand_val = random.random()
             if rand_val < 0.50:
                 user_type = "Healthy"
-                # INCREASED: Occasional visits
-                lam = 1.0  
+                lam = 0.2  # ~2-3 visits per year
             elif rand_val < 0.80:
                 user_type = "Average"
-                # INCREASED: Now ~5 visits/month (Makes them want Standard Plan)
-                lam = 5.0  
+                lam = 0.6  # ~7-8 visits per year
             else:
                 user_type = "Chronic"
-                # INCREASED: Now ~12 visits/month (Makes them want Chronic Plan)
-                lam = 12.0
+                lam = 2.5  # ~30 visits per year
             
             # 2. Simulate 12 Months of Usage
             plan_annual_costs = {p['name']: 0.0 for p in self.plans}

@@ -32,8 +32,10 @@ def subscribe():
         return jsonify({'message': 'Plan not found'}), 404
         
     user_id = g.user_id
-    now = datetime.utcnow()
     
+    # Logic: Check if user already has active sub? (Optional, skipping for simplicity)
+    
+    now = datetime.utcnow()
     subscription = UserSubscription(
         user_id=user_id, 
         plan_id=plan_id,
@@ -49,8 +51,8 @@ def subscribe():
 @auth_required
 def simulate_profit():
     """
-    Simulates profit ONLY for real users currently in the database.
-    (For the 1000 user simulation, use the terminal command).
+    Simulates visits for all active subscribers using a Poisson distribution
+    and calculates Revenue, Cost, and Profit.
     """
     subs = UserSubscription.query.filter_by(active=True).all()
     
@@ -60,21 +62,33 @@ def simulate_profit():
     total_revenue = 0
     total_cost = 0
     results = []
+    
+    # Assumption: Hospital internal cost per visit
     HOSPITAL_COST_PER_VISIT = 30
     
     for sub in subs:
+        # Visit Prediction Logic: Poisson(lambda)
+        # We assign a random average visit count (lambda) to simulate different patient types
+        # In a real app, this might come from user history or metadata.
         avg_visits = np.random.randint(1, 8) 
         simulated_visits = np.random.poisson(lam=avg_visits)
         
         plan = sub.plan
         
-        if plan.included_visits == -1: 
+        # 1. Calculate Revenue
+        # Formula: Base Price + (Extra Visits * Extra Price)
+        if plan.included_visits == -1: # Unlimited Plan
             extra_visits = 0
         else:
             extra_visits = max(0, simulated_visits - plan.included_visits)
             
         revenue = plan.price + (extra_visits * plan.extra_visit_price)
+        
+        # 2. Calculate Cost
+        # Formula: Total Visits * Cost Per Visit
         cost = simulated_visits * HOSPITAL_COST_PER_VISIT
+        
+        # 3. Calculate Profit
         profit = revenue - cost
         
         total_revenue += revenue
@@ -92,6 +106,8 @@ def simulate_profit():
     return jsonify({
         "simulation_summary": {
             "total_users": len(subs),
+            "total_revenue": total_revenue,
+            "total_cost": total_cost,
             "total_net_profit": total_revenue - total_cost
         },
         "details": results
